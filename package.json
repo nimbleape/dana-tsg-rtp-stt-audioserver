@@ -2,6 +2,10 @@
   "name": "dana-rtp-stt-audioserver",
   "version": "1.0.0",
   "description": "Takes Audio RTP and sends to Google Cloud for Speech To Text",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nimbleape/dana-tsg-rtp-stt-audioserver.git"
+  },
   "main": "index.js",
   "author": "Dan Jenkins <dan@nimblea.pe>",
   "license": "MIT",
@@ -14,5 +18,12 @@
     "mqtt": "^3.0.0",
     "pino": "^5.14.0",
     "socket.io": "^2.3.0"
+  },
+  "devDependencies": {
+    "pino-pretty": "^3.4.0"
+  },
+  "scripts": {
+    "start": "node index.js",
+    "start-pretty": "node index.js | pino-pretty"
   }
 }
