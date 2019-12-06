@@ -1,4 +1,4 @@
-const RtpServer = require('./lib/RtpServer');
+const RtpServer = require('./lib/RTPServer');
 const config = require('config');
 const mqtt = require('async-mqtt');
 const Pino = require('pino');
