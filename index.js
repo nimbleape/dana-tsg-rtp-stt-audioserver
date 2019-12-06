@@ -65,30 +65,31 @@ async function createNewGoogleStream(payload) {
         metadata
     };
 
-    let googleStreamConnector = new GoogleCloudConnector(audioConfig, streamingLimit, log);
+    let googleStreamConnector = new GoogleCloudConnector(audioConfig, streamingLimit, payload.channelId, log);
 
-    connectorsMap.set(payload.name, googleStreamConnector);
+    connectorsMap.set(payload.channelId, googleStreamConnector);
 
-    //let audioDataStream = rtpServer.createStream(payload.port);
-    let audioDataStream = rtpServer.createStream(12345);
+    let audioDataStream = rtpServer.createStream(payload.port);
 
     googleStreamConnector.start(audioDataStream);
 
     googleStreamConnector.on('message', async (data) => {
         log.info(`Got a message sending to ${mqttTopicPrefix}/${payload.roomName}/transcription`);
-        await mqttClient.publish(`${mqttTopicPrefix}/${payload.roomName}/transcription`, JSON.stringify(data.results));
+        await mqttClient.publish(`${mqttTopicPrefix}/${payload.roomName}/transcription`, JSON.stringify({ ...data, callerName: payload.callerName }));
     });
 }
 
 function stopGoogleStream(payload) {
     log.info({ payload }, 'Ending stream of audio from Asterisk to send to Google');
 
-    let connector = connectorsMap.get(payload.name);
+    let connector = connectorsMap.get(payload.channelId);
 
     if (connector) {
         connector.end();
-        connectorsMap.delete(payload.name);
+        connectorsMap.delete(payload.channelId);
     }
+
+    rtpServer.endStream(payload.port);
 }
 
 async function run() {

@@ -6,7 +6,7 @@ module.exports = {
     },
     mqtt: {
         url: 'mqtt://test.mosquitto.org',
-        prefix: 'dana-tsg'
+        prefix: 'danatsg'
     },
     google: {
         keyFilename: 'foo.json'
