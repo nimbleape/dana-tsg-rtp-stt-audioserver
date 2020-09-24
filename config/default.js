@@ -9,6 +9,20 @@ module.exports = {
         prefix: 'danatsg'
     },
     google: {
+        enabled: true,
         keyFilename: 'foo.json'
+    },
+    azure: {
+        enabled: true,
+        region: 'uksouth',
+        subscriptionKey: 'key'
+    },
+    amazon: {
+        enabled: true,
+        credentials: {
+            accessKeyId: 'key',
+            secretAccessKey: 'key',
+        },
+        region: 'eu-west-1'
     }
 }

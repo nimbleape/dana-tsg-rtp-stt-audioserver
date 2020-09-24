@@ -3,6 +3,8 @@ const config = require('config');
 const mqtt = require('async-mqtt');
 const Pino = require('pino');
 const GoogleCloudConnector = require('./lib/GoogleCloudConnector');
+const AzureSpeechConnector = require('./lib/AzureSpeechConnector');
+const AmazonTranscribeConnector = require('./lib/AmazonTranscribeConnector');
 const log = new Pino({
     name: 'Dana-AudioServer',
 });
@@ -13,7 +15,77 @@ const mqttTopicPrefix = config.get('mqtt.prefix');
 let connectorsMap = new Map();
 let mqttClient;
 
-async function createNewGoogleStream(payload) {
+log.info('started');
+
+async function createNewSTTStream(payload) {
+
+    let audioDataStream = rtpServer.createStream(payload.port);
+    connectorsMap.set(payload.channelId, new Map());
+
+    if (config.get('google.enabled')) {
+        createNewGoogleStream(payload, audioDataStream);
+    }
+    if (config.get('azure.enabled')) {
+        createNewAzureStream(payload, audioDataStream);
+    }
+    if (config.get('amazon.enabled')) {
+        createNewAmazonStream(payload, audioDataStream);
+    }
+}
+
+async function createNewAzureStream(payload,audioDataStream) {
+    log.info({ payload }, 'New Stream of audio from Asterisk to send to Azure');
+
+    const languageCode = 'en-GB';
+
+    const audioConfig = {
+        languageCode
+    }
+
+    let azureSpeechConnector = new AzureSpeechConnector(audioConfig, payload.channelId, log);
+
+    let map = connectorsMap.get(payload.channelId);
+    map.set('azure', azureSpeechConnector);
+    connectorsMap.set(payload.channelId, map);
+
+    azureSpeechConnector.start(audioDataStream);
+
+    azureSpeechConnector.on('message', async (data) => {
+        log.info(`Got a message sending to ${mqttTopicPrefix}/${payload.roomName}/transcription`);
+        await mqttClient.publish(`${mqttTopicPrefix}/${payload.roomName}/transcription`, JSON.stringify({ ...data, callerName: payload.callerName }));
+    });
+}
+
+async function createNewAmazonStream(payload, audioDataStream) {
+
+    log.info({ payload }, 'New Stream of audio from Asterisk to send to Amazon');
+
+    // these are set here so that we can overwrite them from Asterisk
+    const encoding = 'pcm';
+    const sampleRateHertz = 16000;
+    const languageCode = 'en-US';
+
+    const audioConfig = {
+        encoding,
+        sampleRateHertz,
+        languageCode,
+    };
+
+    let amazonTranscribeConnector = new AmazonTranscribeConnector(audioConfig, payload.channelId, log);
+
+    let map = connectorsMap.get(payload.channelId);
+    map.set('amazon', amazonTranscribeConnector);
+    connectorsMap.set(payload.channelId, map);
+
+    amazonTranscribeConnector.start(audioDataStream);
+
+    amazonTranscribeConnector.on('message', async (data) => {
+        log.info(`Got a message sending to ${mqttTopicPrefix}/${payload.roomName}/transcription`);
+        await mqttClient.publish(`${mqttTopicPrefix}/${payload.roomName}/transcription`, JSON.stringify({ ...data, callerName: payload.callerName }));
+    });
+}
+
+async function createNewGoogleStream(payload, audioDataStream) {
 
     log.info({ payload }, 'New Stream of audio from Asterisk to send to Google');
 
@@ -67,9 +139,9 @@ async function createNewGoogleStream(payload) {
 
     let googleStreamConnector = new GoogleCloudConnector(audioConfig, streamingLimit, payload.channelId, log);
 
-    connectorsMap.set(payload.channelId, googleStreamConnector);
-
-    let audioDataStream = rtpServer.createStream(payload.port);
+    let map = connectorsMap.get(payload.channelId);
+    map.set('google', googleStreamConnector);
+    connectorsMap.set(payload.channelId, map);
 
     googleStreamConnector.start(audioDataStream);
 
@@ -79,13 +151,17 @@ async function createNewGoogleStream(payload) {
     });
 }
 
-function stopGoogleStream(payload) {
+function stopSTTStream(payload) {
     log.info({ payload }, 'Ending stream of audio from Asterisk to send to Google');
 
-    let connector = connectorsMap.get(payload.channelId);
+    let connectors = connectorsMap.get(payload.channelId);
 
-    if (connector) {
-        connector.end();
+    if (connectors) {
+        //loop through the providers
+        connectors.forEach((connector, key) => {
+            connector.end();
+            connectors.delete(key);
+        })
         connectorsMap.delete(payload.channelId);
     }
 
@@ -106,10 +182,10 @@ async function run() {
 
         switch(topic) {
             case `${mqttTopicPrefix}/newStream`:
-                createNewGoogleStream(payload);
+                createNewSTTStream(payload);
                 break;
             case `${mqttTopicPrefix}/streamEnded`:
-                stopGoogleStream(payload);
+                stopSTTStream(payload);
                 break;
             default:
                 break;
