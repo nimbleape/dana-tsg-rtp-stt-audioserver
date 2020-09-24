@@ -11,17 +11,19 @@
   "license": "MIT",
   "private": false,
   "dependencies": {
+    "@aws-sdk/client-transcribe-streaming": "1.0.0-gamma.9",
     "@google-cloud/speech": "^3.4.0",
     "async-mqtt": "^2.4.2",
     "config": "^3.2.4",
     "cuid": "^2.1.6",
     "dgram-as-promised": "^3.0.3",
+    "microsoft-cognitiveservices-speech-sdk": "^1.13.1",
     "mqtt": "^3.0.0",
     "pino": "^5.14.0",
     "socket.io": "^2.3.0"
   },
   "devDependencies": {
-    "pino-pretty": "^3.4.0"
+    "pino-pretty": "^4.2.1"
   },
   "scripts": {
     "start": "node index.js",
