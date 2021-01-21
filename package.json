@@ -20,7 +20,7 @@
     "microsoft-cognitiveservices-speech-sdk": "^1.13.1",
     "mqtt": "^3.0.0",
     "pino": "^5.14.0",
-    "socket.io": "^2.3.0"
+    "socket.io": "^2.4.0"
   },
   "devDependencies": {
     "pino-pretty": "^4.2.1"
